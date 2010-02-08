@@ -1,11 +1,11 @@
 from distutils.core import setup
 
-setup(name='python-tumblr',
+setup(name='pymblr',
       version='0.1',
       description='Python wrapper for Tumblr API',
-      author='Ryan Cox',
-      author_email='ryan.a.cox@gmail.com',
+      author='Derek Arnold',
+      author_email='derek@dderek.com',
       license='Apache License 2.0',
-      url='http://code.google.com/p/python-tumblr',
-      py_modules=['tumblr'],
+      url='http://github.com/lysol/pymblr',
+      py_modules=['pymblr'],
      )
