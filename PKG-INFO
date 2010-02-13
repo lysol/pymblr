@@ -1,10 +1,11 @@
 Metadata-Version: 1.0
-Name: python-tumblr
-Version: 0.1
+Name: pymblr
+Version: 0.2
 Summary: Python wrapper for Tumblr API
-Home-page: http://code.google.com/p/python-tumblr
-Author: Ryan Cox
-Author-email: ryan.a.cox@gmail.com
+Home-page: http://github.com/lysol/pymblr
+Copyright: Ryan Cox
+Author: Derek Arnold
+Author-email: derek@dderek.com
 License: Apache License 2.0
 Description: UNKNOWN
 Platform: UNKNOWN
