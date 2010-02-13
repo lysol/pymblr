@@ -214,12 +214,12 @@ class Api:
                 title = br.title()
             except:
                 title = ''
-            post = self.write_video(data = url, caption = title + "\n<br />" +caption)
+            post = self.write_video(embed = url, caption = title + "\n<br />" +caption)
             return post
         
         elif re.search('[jpg|jpeg|gif|png|bmp]$',url, re.I):
             # Image found
-            post = self.write_photo(data = url, caption = caption, click = url)
+            post = self.write_photo(source = url, caption = caption, click = url)
             return post
         
         else:
