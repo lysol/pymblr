@@ -345,13 +345,16 @@ class Api:
         params['generator'] = GENERATOR
         params['group'] = self.name
         params['date'] = self.date
-        params['tags'] = self.tags
+        if params.has_key('tags'):
+            if type(params['tags']).__name__ == 'list':
+                params['tags'] = '"%s"' % '","'.join(params['tags'])
         params['format'] = self.format
 
         if not params['date']:
             params['date'] = 'now'
-        if not params['tags']:
-            del params['tags']
+        if params.has_key('tags'):
+            if not params['tags']:
+                del params['tags']
         if not params['format']:
             del params['format']
         if not params['private']:
