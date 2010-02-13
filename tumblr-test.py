@@ -16,7 +16,7 @@
 
 import unittest
 import sys
-from tumblr import Api, TumblrAuthError, TumblrRequestError, TumblrError
+from pymblr import Api, TumblrAuthError, TumblrRequestError, TumblrError
 
 BLOG = 'YOU.tumblr.com'
 USER = 'YOUREMAIL'
@@ -24,91 +24,91 @@ PASSWORD = 'YOURPASSWORD'
 
 class TumblrTests(unittest.TestCase):
 
-	def testFixNames(self):
-		api = Api(BLOG)
-		before = {}
-		before['test_one'] = 1 
-		before['test_two'] = 1 
+    def testFixNames(self):
+        api = Api(BLOG)
+        before = {}
+        before['test_one'] = 1 
+        before['test_two'] = 1 
 
-		after = api._fixnames(before)
-		assert not 'test_one' in after
-		assert 'test-one' in after
+        after = api._fixnames(before)
+        assert not 'test_one' in after
+        assert 'test-one' in after
 
-		assert 'test-two' in after
-		assert not 'test_two' in after
+        assert 'test-two' in after
+        assert not 'test_two' in after
 
-	def testRequiredArgs(self):
-		api = Api(BLOG, USER, PASSWORD)
-		self.assertRaises(TumblrError, api.write_regular)
-		self.assertRaises(TumblrError, api.write_quote)
-		self.assertRaises(TumblrError, api.write_photo)
-		self.assertRaises(TumblrError, api.write_photo, source='foo', data='bar')
-		self.assertRaises(TumblrError, api.write_conversation)
-		self.assertRaises(TumblrError, api.write_link)
-		self.assertRaises(TumblrError, api.write_video )
+    def testRequiredArgs(self):
+        api = Api(BLOG, USER, PASSWORD)
+        self.assertRaises(TumblrError, api.write_regular)
+        self.assertRaises(TumblrError, api.write_quote)
+        self.assertRaises(TumblrError, api.write_photo)
+        self.assertRaises(TumblrError, api.write_photo, source='foo', data='bar')
+        self.assertRaises(TumblrError, api.write_conversation)
+        self.assertRaises(TumblrError, api.write_link)
+        self.assertRaises(TumblrError, api.write_video )
 
-	def testWrite(self):
-		api = Api(BLOG, USER, PASSWORD)
+    def testWrite(self):
+        api = Api(BLOG, USER, PASSWORD)
 
-		newpost = api.write_regular('title','body')
-		post = api.read(newpost['id'])
-		assert newpost['id'] == post['id']
+        newpost = api.write_regular('title','body')
+        post = api.read(newpost['id'])
+        assert newpost['id'] == post['id']
 
-		newpost = api.write_link('http://www.google.com')
-		post = api.read(newpost['id'])
-		assert newpost['id'] == post['id']
+    newpost = api.write_link('http://www.google.com')
+        post = api.read(newpost['id'])
+        assert newpost['id'] == post['id']
 
-		newpost = api.write_quote('it was the best of times...')
-		post = api.read(newpost['id'])
-		assert newpost['id'] == post['id']
+        newpost = api.write_quote('it was the best of times...')
+        post = api.read(newpost['id'])
+        assert newpost['id'] == post['id']
 
-		newpost = api.write_conversation('me: wow\nyou: double wow!')
-		post = api.read(newpost['id'])
-		assert newpost['id'] == post['id']
+        newpost = api.write_conversation('me: wow\nyou: double wow!')
+        post = api.read(newpost['id'])
+        assert newpost['id'] == post['id']
 
-		newpost = api.write_video('http://www.youtube.com/watch?v=60og9gwKh1o')
-		post = api.read(newpost['id'])
-		assert newpost['id'] == post['id']
+        newpost = api.write_video('http://www.youtube.com/watch?v=60og9gwKh1o')
+        post = api.read(newpost['id'])
+        assert newpost['id'] == post['id']
 
-		newpost = api.write_photo('http://www.google.com/intl/en_ALL/images/logo.gif')
-		post = api.read(newpost['id'])
-		assert newpost['id'] == post['id']
+        newpost = api.write_photo('http://www.google.com/intl/en_ALL/images/logo.gif')
+        post = api.read(newpost['id'])
+        assert newpost['id'] == post['id']
 
-	def testRead(self):
-		api = Api(BLOG)
-		freq = {}
-		posts = api.read()
-		total = 0
-		for post in posts:
-			total += 1
-			type = post['type']
-			try:
-				freq[type] += 1
-			except:
-				freq[type] = 1
-		assert total > 0
-		for type in freq:
-			assert self.countType(api,type) == freq[type]
+    def testRead(self):
+        api = Api(BLOG)
+        freq = {}
+        posts = api.read()
+        total = 0
+        for post in posts:
+            total += 1
+            type = post['type']
+            try:
+                freq[type] += 1
+            except:
+                freq[type] = 1
+        assert total > 0
+        for type in freq:
+            assert self.countType(api,type) == freq[type]
 
-	def countType(self, api, t):
-		posts = api.read(type=t)
-		i = 0
-		for post in posts: 
-			i += 1
-		return i
-		
-	def testAuthenticate(self):
-		api = Api(BLOG, USER, PASSWORD )
-		api.auth_check()
+    def countType(self, api, t):
+        posts = api.read(type=t)
+        i = 0
+        for post in posts: 
+            i += 1
+        return i
+        
+    def testAuthenticate(self):
+        api = Api(BLOG, USER, PASSWORD )
+        api.auth_check()
 
-	def testBadAuthenticate(self):
-		api = Api(BLOG, USER, 'badpassword' )
-		try:
-			api.auth_check()
-			assert False # should never get here	
-		except TumblrAuthError,  e:
-			pass
+    def testBadAuthenticate(self):
+        api = Api(BLOG, USER, 'badpassword' )
+        try:
+            api.auth_check()
+            assert False # should never get here    
+        except TumblrAuthError,  e:
+            pass
 
 if __name__ == "__main__":
-	unittest.main(argv=sys.argv)
+    unittest.main(argv=sys.argv)
 
