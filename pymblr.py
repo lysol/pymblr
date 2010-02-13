@@ -205,7 +205,7 @@ class Api:
         pass
 
     def autopost_url(self, url, caption):
-        if re.match('youtube\.com\/watch\?v=',url, re.I):
+        if re.search('youtube\.com\/watch\?v=',url, re.I):
             # Video found
             br = Browser()
             br.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.1) Gecko/2008071615 Fedora/3.5.1-1.fc9 Firefox/3.5.1')]
@@ -217,7 +217,7 @@ class Api:
             post = self.write_video(data = url, caption = title + "\n<br />" +caption)
             return post
         
-        elif re.match('[jpg|jpeg|gif|png|bmp]$',url, re.I):
+        elif re.search('[jpg|jpeg|gif|png|bmp]$',url, re.I):
             # Image found
             post = self.write_photo(data = url, caption = caption, click = url)
             return post
