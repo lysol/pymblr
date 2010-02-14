@@ -88,6 +88,7 @@ class TumblrIterator:
         self.index += 1
         return self.results['posts'][self.index-1]  
 
+
 class Api:
     def __init__(self, name, email=None, password=None, private=None, date=None, tags=None, format=None):
         self.name = name
@@ -98,11 +99,6 @@ class Api:
         self.date = date
         self.tags = tags
         self.format = format
-
-    def move_post(self, source_group, target_group, post_id):
-        """Relocate a post from one tumblelog to another."""
-        pass
-
 
     def tumblelogs(self):
         url = 'http://www.tumblr.com/api/authenticate'
