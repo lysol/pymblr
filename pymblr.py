@@ -211,7 +211,7 @@ class Api:
             br.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.1) Gecko/2008071615 Fedora/3.5.1-1.fc9 Firefox/3.5.1')]
             try:
                 br.open(url)
-                title = br.title()
+                title = br.title().replace('YouTube - ','')
             except:
                 title = ''
             post = self.write_video(embed = url, caption = title + "\n<br />" +caption)
