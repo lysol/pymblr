@@ -389,11 +389,14 @@ class Api:
         url = "http://%s:80/api/read/json?start=%i&num=%i" % (self.name, start, num)
         response = urlopen(url)
         page = response.read()
-        #print page
+        #print ">>>\n%s\n>>>>\n" % page
         page = re.sub('var tumblr_api_read = ','',page)
         page = re.sub(';$','',page)
         results = simplejson.loads(re.sub('^var tumblr_api_read = ','',page))
+        if len(results) == 0:
+            raise TumblrError("No JSON returned by Tumblr")
         #return [post['url'] for post in results['posts']]
+        #print results
         post_urls = []
         for post in results['posts']:
             if post['type'] == 'link':
