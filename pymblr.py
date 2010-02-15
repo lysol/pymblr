@@ -386,26 +386,29 @@ class Api:
             raise TumblrError(e.read()) 
 
     def readurls(self, start=0, num=50):
-        url = "http://%s:80/api/read/json?start=%i&num=%i" % (self.name, start, num)
-        response = urlopen(url)
-        page = response.read()
-        #print ">>>\n%s\n>>>>\n" % page
-        page = re.sub('var tumblr_api_read = ','',page)
-        page = re.sub(';$','',page)
-        results = simplejson.loads(re.sub('^var tumblr_api_read = ','',page))
-        if len(results) == 0:
-            raise TumblrError("No JSON returned by Tumblr")
-        #return [post['url'] for post in results['posts']]
-        #print results
-        post_urls = []
-        for post in results['posts']:
-            if post['type'] == 'link':
-                post_urls.append(post['link-url'])
-            elif post['type'] == 'video':
-                post_urls.append(post['video-source'])
-            elif post['type'] == 'photo' and post.has_key('photo-link-url'):
-                post_urls.append(post['photo-link-url'])
-        return post_urls
+        try:
+            url = "http://%s:80/api/read/json?start=%i&num=%i" % (self.name, start, num)
+            response = urlopen(url)
+            page = response.read()
+            #print ">>>\n%s\n>>>>\n" % page
+            page = re.sub('var tumblr_api_read = ','',page)
+            page = re.sub(';$','',page)
+            results = simplejson.loads(re.sub('^var tumblr_api_read = ','',page))
+            if len(results) == 0:
+                raise TumblrError("No JSON returned by Tumblr")
+            #return [post['url'] for post in results['posts']]
+            #print results
+            post_urls = []
+            for post in results['posts']:
+                if post['type'] == 'link':
+                    post_urls.append(post['link-url'])
+                elif post['type'] == 'video':
+                    post_urls.append(post['video-source'])
+                elif post['type'] == 'photo' and post.has_key('photo-link-url'):
+                    post_urls.append(post['photo-link-url'])
+            return post_urls
+        except urllib2.HTTPError, e:
+            return TumblrError(str(e))
         
     def read(self, id=None, start=0,max=2**31-1,type=None): 
         if id:
