@@ -407,7 +407,7 @@ class Api:
                 elif post['type'] == 'photo' and post.has_key('photo-link-url'):
                     post_urls.append(post['photo-link-url'])
             return post_urls
-        except urllib2.HTTPError, e:
+        except HTTPError, e:
             return TumblrError(str(e))
         
     def read(self, id=None, start=0,max=2**31-1,type=None): 
