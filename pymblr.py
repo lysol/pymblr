@@ -200,7 +200,7 @@ class Api:
     def last_urls(self, count=50):
         pass
 
-    def autopost_url(self, url, caption):
+    def autopost_url(self, url, caption, tags = []):
         if re.search('youtube\.com\/watch\?v=',url, re.I):
             # Video found
             br = Browser()
@@ -210,12 +210,12 @@ class Api:
                 title = br.title().replace('YouTube - ','')
             except:
                 title = ''
-            post = self.write_video(embed = url, caption = title + "\n<br />" +caption)
+            post = self.write_video(embed = url, caption = title + "\n<br />" +caption, tags)
             return post
         
         elif re.search('[jpg|jpeg|gif|png|bmp]$',url, re.I):
             # Image found
-            post = self.write_photo(source = url, caption = caption, click = url)
+            post = self.write_photo(source = url, caption = caption, click = url, tags)
             return post
         
         else:
@@ -223,7 +223,7 @@ class Api:
             br = Browser()
             br.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.1) Gecko/2008071615 Fedora/3.5.1-1.fc9 Firefox/3.5.1')]
             br.open(url)
-            post = self.write_link(name = br.title(), url = url, description = caption)
+            post = self.write_link(name = br.title(), url = url, description = caption, tags)
             return post
 
     def write_regular(self, title=None, body=None, **args): 
