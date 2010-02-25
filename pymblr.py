@@ -213,7 +213,7 @@ class Api:
             post = self.write_video(embed = url, caption = title + "\n<br />" +caption, tags = tags)
             return post
         
-        elif re.search('[jpg|jpeg|gif|png|bmp]$',url, re.I):
+        elif re.search('(jpg|jpeg|gif|png|bmp)$',url, re.I):
             # Image found
             post = self.write_photo(source = url, caption = caption, click = url, tags = tags)
             return post
