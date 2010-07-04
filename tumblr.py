@@ -55,7 +55,7 @@ class TumblrRequestError(TumblrError):
 	''' Wraps a 400 result '''
 	pass
 
-class TumblrIterator:
+class TumblrIterator(object):
 	def __init__(self, name, start, max, type):
 		self.name = name
 		self.start = start
@@ -85,7 +85,7 @@ class TumblrIterator:
 		self.index += 1
 		return self.results['posts'][self.index-1]  
 
-class Api:
+class Api(object):
 	def __init__(self, name, email=None, password=None, private=None, date=None, tags=None, format=None):
 		self.name = name
 		self.is_authenticated = False
