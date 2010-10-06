@@ -83,6 +83,36 @@ class TumblrIterator(object):
 			raise StopIteration
 
 		self.index += 1
+		return self.results['posts'][self.index-1]
+		
+class TumblrIteratorAuthenticated(TumblrIterator):
+    '''
+    Subclass of tumblrIterator that includes the ability to accept email/pwd for authenticated_reads
+    '''
+	def __init__(self,name, email, password, start,max,type):
+		self.email = email
+		self.password = password
+		super(TumblrIteratorAuthenticated, self).__init__(name,start,max,type)
+
+	def next(self):
+		if not self.results or (self.index == len(self.results['posts'])): 
+			self.start += self.index
+			self.index = 0
+			url = "http://%s.tumblr.com/api/read/json" % (self.name)
+			param_set = {'password':self.password, 'email':self.email, 'start':self.start, 'num':PAGESIZE}
+			if self.type:
+				param_set['type']= self.type
+			## need to encode params for urlopen to do POST for authenticated read
+			params = urlencode(param_set)			
+			response = urlopen(url, params)
+			page = response.read()
+			m = re.match("^.*?({.*}).*$", page,re.DOTALL | re.MULTILINE | re.UNICODE)
+			self.results = simplejson.loads(m.group(1))
+
+		if (self.index >= self.max) or len(self.results['posts']) == 0:
+			raise StopIteration
+
+		self.index += 1
 		return self.results['posts'][self.index-1]  
 
 class Api(object):
@@ -317,6 +347,26 @@ class Api(object):
 				newid = e.read() 
 				return self.read(id=newid)
 			raise TumblrError(e.read()) 
+	
+	def authenticated_read(self, id=None, start=0, max=2**31-1, type=None):
+	    '''
+	    a close of the read method only it uses post instead and includes email/password 
+	    to authenticate the read.  note it returns a subclasses tumblriterator
+	    '''
+		if id:
+			url = "http://%s.tumblr.com/api/read/json" % (self.name)
+			## need to encode params for urlopen to do POST for authenticated read
+			params = urlencode({'email':self.email, 'password':self.password, 'start':start, 'id':id})
+			response = urlopen(url=url, data=params)
+			page = response.read()
+			m = re.match("^.*?({.*}).*$", page,re.DOTALL | re.MULTILINE | re.UNICODE)
+			results = simplejson.loads(m.group(1))
+			if len(results['posts']) == 0:
+				return None 
+			return results['posts'][0]  
+		else:	
+			return TumblrIteratorAuthenticated(self.name,self.email,self.password,start,max,type)
+
 
 	def read(self, id=None, start=0,max=2**31-1,type=None): 
 		if id:
