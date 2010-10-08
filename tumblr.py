@@ -83,6 +83,9 @@ class TumblrIterator(object):
         the current index as the 'start' for the service call.  Think of this as fetching the next
         page of results from tumblr.  If there are no result left then self.results is going to 
         be empty, and the StopIteration is going to be thrown when evaluated.
+        
+        ** Important, if some some reason 'start' is not passed correctly to the api, this will 
+           result in an infinite loop
         '''
         if not self.results or (self.index == len(self.results['posts'])): 
             self.start += self.index
@@ -109,20 +112,30 @@ class TumblrIteratorAuthenticated(TumblrIterator):
     
     def next(self):
         '''
-        See above for initial explanation.  
+        See above for initial explanation of iterator
         
-        Note:
+        Additional Notes:
+        
+        urlopen(url,params) - by passing params to urlopen it makes the request POST *required*
+                              for authenticated_read
+        
         This authenticated fetches the json data stream from tumblr.  Authenticated mode means 
         private items are returned, problem with json is it doesn't indicate which entries are
-        private.  The xml version of the data stream contains an attribute on the post node
+        private.  The xml version of the data stream contains an attribute on the post node.  
+        So tumblr needs to add this property to the json for this to work properply.
+        
         '''
         if not self.results or (self.index == len(self.results['posts'])): 
             self.start += self.index
             self.index = 0
-            url = "http://%s.tumblr.com/api/read/json" % (self.name)
-            param_set = {'password':self.password, 'email':self.email, 'start':self.start, 'num':PAGESIZE}
+            ##
+            ## Only send email/pwd through post, all other params MUST be get values otherwise 
+            ## they will be ignored by tumblr api
+            ##
+            url = "http://%s.tumblr.com/api/read/json?start=%s&num=%s" % (self.name,self.start, PAGESIZE)
+            param_set = {'password':self.password, 'email':self.email}
             if self.type:
-                param_set['type']= self.type
+                url += "&type=" + self.type
             ## need to encode params for url open to do POST for authenticated read
             params = urlencode(param_set)           
             response = urlopen(url, params)
