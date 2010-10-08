@@ -34,6 +34,8 @@ try:
     import simplejson
 except ImportError:
     from django.utils import simplejson
+    
+
 
 GENERATOR = 'python-tumblr'
 PAGESIZE = 50  
@@ -68,6 +70,20 @@ class TumblrIterator(object):
         return self
     
     def next(self):
+        '''
+        Iterator explained:
+        On initial run self.results will be empty and thus a service call is made to tumblr. This payload returned from the
+        tumblr api will be parsed and stored inside of self.results.  The len(self.results) is basically our total number of iterations
+        to run for the specified elements returned for the given start/num sent to the intial api request.
+        
+        After the results are stored the code will increment the self.index and return an element
+        
+        Subsequent iterations will rotate through skipping another service call unless the index
+        has caught up to the number of total posts, if so another request is made this time using 
+        the current index as the 'start' for the service call.  Think of this as fetching the next
+        page of results from tumblr.  If there are no result left then self.results is going to 
+        be empty, and the StopIteration is going to be thrown when evaluated.
+        '''
         if not self.results or (self.index == len(self.results['posts'])): 
             self.start += self.index
             self.index = 0
@@ -84,17 +100,22 @@ class TumblrIterator(object):
 
         self.index += 1
         return self.results['posts'][self.index-1]
-        
+
 class TumblrIteratorAuthenticated(TumblrIterator):
-    '''
-    Subclass of tumblrIterator that includes the ability to accept email/pwd for authenticated_reads
-    '''
     def __init__(self,name, email, password, start,max,type):
         self.email = email
         self.password = password
         super(TumblrIteratorAuthenticated, self).__init__(name,start,max,type)
-        
+    
     def next(self):
+        '''
+        See above for initial explanation.  
+        
+        Note:
+        This authenticated fetches the json data stream from tumblr.  Authenticated mode means 
+        private items are returned, problem with json is it doesn't indicate which entries are
+        private.  The xml version of the data stream contains an attribute on the post node
+        '''
         if not self.results or (self.index == len(self.results['posts'])): 
             self.start += self.index
             self.index = 0
@@ -102,7 +123,7 @@ class TumblrIteratorAuthenticated(TumblrIterator):
             param_set = {'password':self.password, 'email':self.email, 'start':self.start, 'num':PAGESIZE}
             if self.type:
                 param_set['type']= self.type
-            ## need to encode params for urlopen to do POST for authenticated read
+            ## need to encode params for url open to do POST for authenticated read
             params = urlencode(param_set)           
             response = urlopen(url, params)
             page = response.read()
@@ -114,6 +135,7 @@ class TumblrIteratorAuthenticated(TumblrIterator):
 
         self.index += 1
         return self.results['posts'][self.index-1]  
+        
 
 class Api(object):
     def __init__(self, name, email=None, password=None, private=None, date=None, tags=None, format=None):
@@ -339,7 +361,6 @@ class Api(object):
         #print params
         try: 
             f = urlopen(req)
-            print f.read()
             raise TumblrError("Error writing post")
 
         except HTTPError, e:
@@ -353,6 +374,7 @@ class Api(object):
         a close of the read method only it uses post instead and includes email/password 
         to authenticate the read.  note it returns a subclasses tumblr-iterator
         '''
+
         if id:
             url = "http://%s.tumblr.com/api/read/json" % (self.name)
             ## need to encode params for urlopen to do POST for authenticated read
@@ -377,7 +399,7 @@ class Api(object):
             results = simplejson.loads(m.group(1))
             if len(results['posts']) == 0:
                 return None
-                
+
             return results['posts'][0]  
         else:   
             return TumblrIterator(self.name,start,max,type)
