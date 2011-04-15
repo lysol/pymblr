@@ -28,26 +28,21 @@ from poster.encode import multipart_encode
 from poster.streaminghttp import register_openers
 
 import base64
+import json
+import logging
 import re
 
-try:
-    import simplejson
-except ImportError:
-    from django.utils import simplejson
-    
-
-
 GENERATOR = 'python-tumblr'
-PAGESIZE = 50  
+PAGESIZE = 50
 
 
 class TumblrError(Exception):
-    ''' General Tumblr error ''' 
+    ''' General Tumblr error '''
     def __init__(self, msg):
-        self.msg = msg 
+        self.msg = msg
 
     def __str__(self):
-        return self.msg 
+        return self.msg
 
 class TumblrAuthError(TumblrError):
     ''' Wraps a 403 result '''
@@ -57,37 +52,20 @@ class TumblrRequestError(TumblrError):
     ''' Wraps a 400 result '''
     pass
 
-class TumblrIterator(object):
+class TumblrIterator:
     def __init__(self, name, start, max, type):
         self.name = name
         self.start = start
-        self.max = max 
+        self.max = max
         self.type = type
         self.results = None
         self.index = 0
-        
+
     def __iter__(self):
         return self
-    
+
     def next(self):
-        '''
-        Iterator explained:
-        On initial run self.results will be empty and thus a service call is made to tumblr. This payload returned from the
-        tumblr api will be parsed and stored inside of self.results.  The len(self.results) is basically our total number of iterations
-        to run for the specified elements returned for the given start/num sent to the intial api request.
-        
-        After the results are stored the code will increment the self.index and return an element
-        
-        Subsequent iterations will rotate through skipping another service call unless the index
-        has caught up to the number of total posts, if so another request is made this time using 
-        the current index as the 'start' for the service call.  Think of this as fetching the next
-        page of results from tumblr.  If there are no result left then self.results is going to 
-        be empty, and the StopIteration is going to be thrown when evaluated.
-        
-        ** Important, if some some reason 'start' is not passed correctly to the api, this will 
-           result in an infinite loop
-        '''
-        if not self.results or (self.index == len(self.results['posts'])): 
+        if not self.results or (self.index == len(self.results['posts'])):
             self.start += self.index
             self.index = 0
             url = "http://%s.tumblr.com/api/read/json?start=%s&num=%s" % (self.name,self.start, PAGESIZE)
@@ -96,7 +74,7 @@ class TumblrIterator(object):
             response = urlopen(url)
             page = response.read()
             m = re.match("^.*?({.*}).*$", page,re.DOTALL | re.MULTILINE | re.UNICODE)
-            self.results = simplejson.loads(m.group(1))
+            self.results = json.loads(m.group(1))
 
         if (self.index >= self.max) or len(self.results['posts']) == 0:
             raise StopIteration
@@ -104,57 +82,11 @@ class TumblrIterator(object):
         self.index += 1
         return self.results['posts'][self.index-1]
 
-class TumblrIteratorAuthenticated(TumblrIterator):
-    def __init__(self,name, email, password, start,max,type):
-        self.email = email
-        self.password = password
-        super(TumblrIteratorAuthenticated, self).__init__(name,start,max,type)
-    
-    def next(self):
-        '''
-        See above for initial explanation of iterator
-        
-        Additional Notes:
-        
-        urlopen(url,params) - by passing params to urlopen it makes the request POST *required*
-                              for authenticated_read
-        
-        This authenticated fetches the json data stream from tumblr.  Authenticated mode means 
-        private items are returned, problem with json is it doesn't indicate which entries are
-        private.  The xml version of the data stream contains an attribute on the post node.  
-        So tumblr needs to add this property to the json for this to work properply.
-        
-        '''
-        if not self.results or (self.index == len(self.results['posts'])): 
-            self.start += self.index
-            self.index = 0
-            ##
-            ## Only send email/pwd through post, all other params MUST be get values otherwise 
-            ## they will be ignored by tumblr api
-            ##
-            url = "http://%s.tumblr.com/api/read/json?start=%s&num=%s" % (self.name,self.start, PAGESIZE)
-            param_set = {'password':self.password, 'email':self.email}
-            if self.type:
-                url += "&type=" + self.type
-            ## need to encode params for url open to do POST for authenticated read
-            params = urlencode(param_set)           
-            response = urlopen(url, params)
-            page = response.read()
-            m = re.match("^.*?({.*}).*$", page,re.DOTALL | re.MULTILINE | re.UNICODE)
-            self.results = simplejson.loads(m.group(1))
-
-        if (self.index >= self.max) or len(self.results['posts']) == 0:
-            raise StopIteration
-
-        self.index += 1
-        return self.results['posts'][self.index-1]  
-        
-
-class Api(object):
+class Api:
     def __init__(self, name, email=None, password=None, private=None, date=None, tags=None, format=None):
         self.name = name
         self.is_authenticated = False
-        self.email = email 
+        self.email = email
         self.password = password
         self.private = private
         self.date = date
@@ -165,10 +97,10 @@ class Api(object):
         if self.is_authenticated:
             return
         url = 'http://www.tumblr.com/api/write'
-        values = {  
+        values = {
                 'action': 'authenticate',
-                'generator' : GENERATOR, 
-                'email': self.email, 
+                'generator' : GENERATOR,
+                'email': self.email,
                 'password' : self.password,
                 'private' : self.private,
                 'group': self.name,
@@ -179,10 +111,10 @@ class Api(object):
 
         data = urlencode(values)
         req = Request(url, data)
-        try: 
+        try:
             response = urlopen(req)
             page = response.read()
-            self.url = page 
+            self.url = page
             self.is_authenticated = True
             return
         except HTTPError, e:
@@ -199,14 +131,14 @@ class Api(object):
         self.params = urlencode({'email':self.email, 'password': self.password})
         self.headers = {"Content-type": "application/x-www-form-urlencoded", "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"}
         self.response = self._getcookie(self.domain, self.url, self.headers, self.params)
-        
+
         self.cookie = self._cookie(self.response)
-        
+
         self.response = self._getcookie(self.domain, self.url, self.headers, self.params, self.cookie)
         self.url_iphone = 'http://www.tumblr.com/iphone'
         self.data = self._getcookie(self.domain, self.url_iphone, self.headers, self.params, self.cookie)
-        print self.data.read()
-        
+        return self.data.read()
+
     def _cookie(self, response):
         self.cookie = response.getheader('set-cookie')
 
@@ -216,9 +148,9 @@ class Api(object):
         self.pfe = self.cookie[self.cookie.find('pfe'):]
         self.pfe = self.pfe[:self.pfe.find(' ')]
         self.cookie = self.pfu + self.pfp + self.pfe
-        
+
         return self.cookie
-        
+
 
     def _getcookie(self, domain, url, headers, params = None, cookie = None):
         self.session = HTTPConnection(domain, '80')
@@ -226,16 +158,16 @@ class Api(object):
             headers['Cookie'] = cookie
             #headers['Referer'] = 'http://www.tumblr.com/iphone'
         self.session.request('POST',url, params, headers)
-            
+
         self.response = self.session.getresponse()
         #print self.response.status, self.response.reason
-        return self.response        
+        return self.response
 
-    def write_regular(self, title=None, body=None, **args): 
+    def write_regular(self, title=None, body=None, **args):
         if title:
             args['title'] = title
-        if body: 
-            args['body'] = body 
+        if body:
+            args['body'] = body
         args = self._fixnames(args)
         if not 'title' in args and not 'body' in args:
             raise TumblrError("Must supply either body or title argument")
@@ -244,11 +176,11 @@ class Api(object):
         args['type'] = 'regular'
         return self._write(args)
 
-    def write_photo(self, source=None, data=None, caption=None, click=None, **args): 
+    def write_photo(self, source=None, data=None, caption=None, click=None, **args):
         if source:
-            args['source'] = source 
+            args['source'] = source
         else:
-            args['data'] = open(data)
+            args['data'] = open(data, "rb")
 
         args['caption'] = caption
         args['click-through-url'] = click
@@ -259,24 +191,24 @@ class Api(object):
 
         if not 'source' in args and not 'data' in args:
             raise TumblrError("Must supply source or data argument")
-        
+
         self.auth_check()
         args['type'] = 'photo'
         return self._write(args)
 
-    def write_quote(self, quote=None, source=None, **args): 
+    def write_quote(self, quote=None, source=None, **args):
         if quote:
             args['quote'] = quote
             args['source'] = source
         args = self._fixnames(args)
-        if not 'quote' in args: 
+        if not 'quote' in args:
             raise TumblrError("Must supply quote arguments")
-        
+
         self.auth_check()
         args['type'] = 'quote'
         return self._write(args)
 
-    def write_link(self, name=None, url=None, description=None, **args): 
+    def write_link(self, name=None, url=None, description=None, **args):
         if url:
             args['name'] = name
             args['url'] = url
@@ -289,7 +221,7 @@ class Api(object):
         args['type'] = 'link'
         return self._write(args)
 
-    def write_conversation(self, title=None, conversation=None, **args): 
+    def write_conversation(self, title=None, conversation=None, **args):
         if conversation:
             args['title'] = title
             args['conversation'] = conversation
@@ -309,7 +241,7 @@ class Api(object):
 
         args['caption'] = caption
         args = self._fixnames(args)
-        
+
         if not 'data' in args:
             raise TumblrError("Must supply data argument")
 
@@ -317,7 +249,7 @@ class Api(object):
         args['type'] = 'audio'
         return self._write(args)
 
-    def write_video(self, embed=None, caption=None, **args): 
+    def write_video(self, embed=None, caption=None, **args):
         if embed:
             args['embed'] = embed
             args['caption'] = caption
@@ -327,20 +259,20 @@ class Api(object):
 
         if not 'embed' in args and not 'data' in args:
             raise TumblrError("Must supply embed or data argument")
-        
+
         self.auth_check()
         args['type'] = 'video'
         return self._write(args)
 
     def _fixnames(self, args):
-        for key in args: 
+        for key in args:
             if '_' in key:
                 value = args[key]
                 del args[key]
                 args[key.replace('_', '-')] = value
-        return args 
+        return args
 
-    def _write(self, params, headers=None): 
+    def _write(self, params, headers=None):
         self.auth_check()
         url = 'http://www.tumblr.com/api/write'
         register_openers()
@@ -355,10 +287,10 @@ class Api(object):
 
         if not params['date']:
             params['date'] = 'now'
-        if not params['tags']:
-            del params['tags']
-        if not params['format']:
-            del params['format']
+
+        params = dict((k,v) for k,v in params.iteritems() if v)
+
+        logging.debug(params)
 
         if not 'data' in params:
             data = urlencode(params)
@@ -372,49 +304,24 @@ class Api(object):
 
         newid = None
         #print params
-        try: 
+        try:
             f = urlopen(req)
-            raise TumblrError("Error writing post")
-
+            logging.debug(f.read())
         except HTTPError, e:
-            if 201 == e.code:
-                newid = e.read() 
-                return self.read(id=newid)
-            raise TumblrError(e.read()) 
-    
-    def authenticated_read(self, id=None, start=0, max=2**31-1, type=None):
-        '''
-        a close of the read method only it uses post instead and includes email/password 
-        to authenticate the read.  note it returns a subclasses tumblr-iterator
-        '''
+            raise TumblrError(e.read())
 
-        if id:
-            url = "http://%s.tumblr.com/api/read/json" % (self.name)
-            ## need to encode params for urlopen to do POST for authenticated read
-            params = urlencode({'email':self.email, 'password':self.password, 'start':start, 'id':id})
-            response = urlopen(url=url, data=params)
-            page = response.read()
-            m = re.match("^.*?({.*}).*$", page,re.DOTALL | re.MULTILINE | re.UNICODE)
-            results = simplejson.loads(m.group(1))
-            if len(results['posts']) == 0:
-                return None
-            return results['posts'][0]  
-        else:   
-            return TumblrIteratorAuthenticated(self.name,self.email,self.password,start,max,type)
-
-
-    def read(self, id=None, start=0,max=2**31-1,type=None): 
+    def read(self, id=None, start=0,max=2**31-1,type=None):
         if id:
             url = "http://%s.tumblr.com/api/read/json?id=%s" % (self.name,id)
             response = urlopen(url)
             page = response.read()
             m = re.match("^.*?({.*}).*$", page,re.DOTALL | re.MULTILINE | re.UNICODE)
-            results = simplejson.loads(m.group(1))
+            results = json.loads(m.group(1))
             if len(results['posts']) == 0:
                 return None
 
-            return results['posts'][0]  
-        else:   
+            return results['posts'][0]
+        else:
             return TumblrIterator(self.name,start,max,type)
 
 if __name__ == "__main__":
